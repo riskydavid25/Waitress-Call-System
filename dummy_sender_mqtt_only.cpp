@@ -7,7 +7,6 @@
 const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
 
-// ID Unik Perangkat
 const char* deviceID = "Sender1";
 const char* mqtt_client_id = "ESP32_Sender1";
 
@@ -52,18 +51,14 @@ void reconnect() {
   }
 }
 
-// ==== KIRIM DATA KE MQTT ====
+// ==== KIRIM DATA KE MQTT (WIB Format) ====
 void sendMessage(const char* topic, const char* type, bool status, int count, int rssi) {
   time_t now = time(nullptr);
   struct tm timeinfo;
-  localtime_r(&now, &timeinfo);
+  localtime_r(&now, &timeinfo);  // Otomatis ke Asia/Jakarta
 
-  // Konversi ke zona waktu WIB (UTC+7)
-  timeinfo.tm_hour += 7;
-  mktime(&timeinfo);
-
-  char isoTimestamp[30];
-  strftime(isoTimestamp, sizeof(isoTimestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+  char formattedTime[40];
+  strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S WIB", &timeinfo);
 
   String payload = "{";
   payload += "\"id\":\"" + String(deviceID) + "\",";
@@ -71,7 +66,7 @@ void sendMessage(const char* topic, const char* type, bool status, int count, in
   payload += "\"status\":" + String(status ? "true" : "false") + ",";
   payload += "\"count\":" + String(count) + ",";
   payload += "\"rssi\":" + String(rssi) + ",";
-  payload += "\"timestamp\":\"" + String(isoTimestamp) + "\"";
+  payload += "\"timestamp\":\"" + String(formattedTime) + "\"";
   payload += "}";
 
   client.publish(topic, payload.c_str(), MQTT_QOS_LEVEL, true);
@@ -102,7 +97,7 @@ void senderTask(void* parameter) {
       sendMessage((topicBase + "call").c_str(), "call", false, billCount, rssi);
     }
 
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS); // Delay 5 detik
   }
 }
 
@@ -127,7 +122,7 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
 
-  // Setup NTP ke Asia/Jakarta
+  // Sinkronisasi waktu ke Asia/Jakarta (GMT+7)
   configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < 100000) {
     Serial.print(".");
