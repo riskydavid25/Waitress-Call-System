@@ -3,7 +3,7 @@ import json
 import time
 import random
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 # MQTT Broker
 BROKER = "broker.emqx.io"
@@ -11,6 +11,9 @@ PORT = 1883
 
 # Daftar device ID
 SENDERS = ["Sender1", "Sender2", "Sender3"]
+
+# Zona waktu WIB (GMT+7)
+WIB = timezone(timedelta(hours=7))
 
 # Fungsi untuk publish data dari satu sender
 def sender_loop(sender_id):
@@ -24,7 +27,9 @@ def sender_loop(sender_id):
     while True:
         action = random.choice(["call", "bill"])
         rssi = random.randint(-80, -40)
-        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Format timestamp dalam WIB seperti "2025-04-06 19:15:42 WIB"
+        timestamp = datetime.now(WIB).strftime("%Y-%m-%d %H:%M:%S WIB")
 
         if action == "call":
             call_count += 1
