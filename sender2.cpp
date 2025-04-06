@@ -14,9 +14,6 @@ const char* mqtt_client_id = "ESP32_Sender2";
 #define BLYNK_PRINT Serial
 char auth[] = "cjqSPyXSlzm32sMLG0JOfH7ANlSvqe8M"; // Ganti dengan token kamu
 
-// ==== QoS MQTT ====
-#define MQTT_QOS_LEVEL 1
-
 // ==== PIN BUTTON & LED ====
 const int callButton = 33;
 const int billButton = 25;
@@ -86,7 +83,9 @@ void sendMessage(const char* type, bool status, int count) {
   payload += "\"timestamp\":\"" + String(formattedTime) + "\"";
   payload += "}";
 
-  client.publish(topic.c_str(), payload.c_str(), MQTT_QOS_LEVEL, true);
+  // ✅ Perbaikan: tanpa QoS, gunakan versi publish yang benar
+  client.publish(topic.c_str(), payload.c_str(), true);
+
   Serial.printf("📤 Sent to %s: %s\n", topic.c_str(), payload.c_str());
 }
 
@@ -194,6 +193,7 @@ void setup() {
   client.setServer(mqtt_server, mqtt_port);
   Blynk.begin(auth, WiFi.SSID().c_str(), WiFi.psk().c_str());
 
+  // Sinkronisasi waktu lokal WIB
   configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < 100000) {
     Serial.print(".");
@@ -207,5 +207,5 @@ void setup() {
 
 // ==== LOOP ====
 void loop() {
-  // FreeRTOS: tidak ada yang dijalankan di sini
+  // Tidak ada apa-apa di loop karena semua pakai FreeRTOS Task
 }
