@@ -6,12 +6,8 @@
 // ==== KONFIGURASI MQTT ====
 const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
-
 const char* deviceID = "Sender1";
 const char* mqtt_client_id = "ESP32_Sender1";
-
-// ==== QoS MQTT ====
-#define MQTT_QOS_LEVEL 1
 
 // ==== LED Indikator ====
 const int greenLed = 12;
@@ -31,7 +27,7 @@ int billCount = 0;
 void setup_wifi() {
   wifiManager.setTimeout(180);
   if (!wifiManager.autoConnect("Sender_AP")) {
-    Serial.println("⛔ Timeout, Restart ESP");
+    Serial.println("⛔ Timeout, Restarting ESP");
     ESP.restart();
   }
   Serial.println("✅ WiFi Connected: " + WiFi.localIP().toString());
@@ -46,16 +42,16 @@ void reconnect() {
     } else {
       Serial.print("⛔ Failed, rc=");
       Serial.print(client.state());
-      delay(5000);
+      delay(3000);
     }
   }
 }
 
-// ==== KIRIM DATA KE MQTT (WIB Format) ====
+// ==== KIRIM DATA KE MQTT ====
 void sendMessage(const char* topic, const char* type, bool status, int count, int rssi) {
   time_t now = time(nullptr);
   struct tm timeinfo;
-  localtime_r(&now, &timeinfo);  // Otomatis ke Asia/Jakarta
+  localtime_r(&now, &timeinfo);  // Otomatis Asia/Jakarta
 
   char formattedTime[40];
   strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S WIB", &timeinfo);
@@ -69,7 +65,9 @@ void sendMessage(const char* topic, const char* type, bool status, int count, in
   payload += "\"timestamp\":\"" + String(formattedTime) + "\"";
   payload += "}";
 
-  client.publish(topic, payload.c_str(), MQTT_QOS_LEVEL, true);
+  // ✅ Publish tanpa parameter QoS
+  client.publish(topic, payload.c_str(), true);
+
   Serial.printf("📤 Sent to %s: %s\n", topic, payload.c_str());
 }
 
