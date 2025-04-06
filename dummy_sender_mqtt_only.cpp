@@ -7,67 +7,63 @@
 const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
 
-// Ganti sesuai ID unik masing-masing perangkat (misal: "Sender1", "Sender2", dll)
-const char* deviceID = "Sender1";  
-const char* mqtt_client_id = "ESP32_Sender1";  // Juga harus unik per device
+// ID Unik Perangkat
+const char* deviceID = "Sender1";
+const char* mqtt_client_id = "ESP32_Sender1";
 
-// ==== KONFIGURASI QoS ====
-#define MQTT_QOS_LEVEL 1  
-/*
-  QoS MQTT:
-  - 0: at most once (tidak dijamin sampai)
-  - 1: at least once (penerima bisa terima lebih dari sekali)
-  - 2: exactly once (paling aman, tapi lebih lambat)
-  Ubah nilai di atas sesuai kebutuhan aplikasi.
-*/
+// ==== QoS MQTT ====
+#define MQTT_QOS_LEVEL 1
 
-// ==== PIN LED ====
+// ==== LED Indikator ====
 const int greenLed = 12;
 const int blueLed = 13;
 const int wifiLed = 14;
 
-// ==== OBJEK WiFi & MQTT ====
+// ==== OBJEK ====
 WiFiClient espClient;
 PubSubClient client(espClient);
 WiFiManager wifiManager;
 
-// ==== COUNTER ====
+// ==== Counter ====
 int callCount = 0;
 int billCount = 0;
 
-// ==== FUNGSI SETUP WIFI ====
+// ==== SETUP WIFI ====
 void setup_wifi() {
   wifiManager.setTimeout(180);
   if (!wifiManager.autoConnect("Sender_AP")) {
-    Serial.println("Failed to connect and hit timeout");
+    Serial.println("⛔ Timeout, Restart ESP");
     ESP.restart();
   }
-  Serial.println("WiFi connected");
-  Serial.println(WiFi.localIP());
+  Serial.println("✅ WiFi Connected: " + WiFi.localIP().toString());
 }
 
-// ==== RECONNECT MQTT ====
+// ==== MQTT RECONNECT ====
 void reconnect() {
   while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
+    Serial.print("🔄 Connecting to MQTT...");
     if (client.connect(mqtt_client_id)) {
-      Serial.println("connected");
+      Serial.println("✅ Connected");
     } else {
-      Serial.print("failed, rc=");
+      Serial.print("⛔ Failed, rc=");
       Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
       delay(5000);
     }
   }
 }
 
-// ==== KIRIM PESAN KE BROKER ====
+// ==== KIRIM DATA KE MQTT ====
 void sendMessage(const char* topic, const char* type, bool status, int count, int rssi) {
   time_t now = time(nullptr);
-  struct tm* timeinfo = gmtime(&now);
+  struct tm timeinfo;
+  localtime_r(&now, &timeinfo);
 
-  char isoTimestamp[25];
-  strftime(isoTimestamp, sizeof(isoTimestamp), "%Y-%m-%dT%H:%M:%SZ", timeinfo);
+  // Konversi ke zona waktu WIB (UTC+7)
+  timeinfo.tm_hour += 7;
+  mktime(&timeinfo);
+
+  char isoTimestamp[30];
+  strftime(isoTimestamp, sizeof(isoTimestamp), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
 
   String payload = "{";
   payload += "\"id\":\"" + String(deviceID) + "\",";
@@ -79,10 +75,10 @@ void sendMessage(const char* topic, const char* type, bool status, int count, in
   payload += "}";
 
   client.publish(topic, payload.c_str(), MQTT_QOS_LEVEL, true);
-  Serial.printf("Published to %s: %s (QoS %d)\n", topic, payload.c_str(), MQTT_QOS_LEVEL);
+  Serial.printf("📤 Sent to %s: %s\n", topic, payload.c_str());
 }
 
-// ==== TASK UTAMA UNTUK KIRIM CALL/BILL ====
+// ==== TASK SIMULASI KIRIMAN ====
 void senderTask(void* parameter) {
   while (true) {
     if (!client.connected()) reconnect();
@@ -90,28 +86,27 @@ void senderTask(void* parameter) {
 
     int action = random(0, 2); // 0 = call, 1 = bill
     int rssi = WiFi.RSSI();
-
-    String baseTopic = "waitress/" + String(deviceID) + "/";
+    String topicBase = "waitress/" + String(deviceID) + "/";
 
     if (action == 0) {
       callCount++;
       digitalWrite(greenLed, HIGH);
       digitalWrite(blueLed, LOW);
-      sendMessage((baseTopic + "call").c_str(), "call", true, callCount, rssi);
-      sendMessage((baseTopic + "bill").c_str(), "bill", false, callCount, rssi);
+      sendMessage((topicBase + "call").c_str(), "call", true, callCount, rssi);
+      sendMessage((topicBase + "bill").c_str(), "bill", false, callCount, rssi);
     } else {
       billCount++;
       digitalWrite(greenLed, LOW);
       digitalWrite(blueLed, HIGH);
-      sendMessage((baseTopic + "bill").c_str(), "bill", true, billCount, rssi);
-      sendMessage((baseTopic + "call").c_str(), "call", false, billCount, rssi);
+      sendMessage((topicBase + "bill").c_str(), "bill", true, billCount, rssi);
+      sendMessage((topicBase + "call").c_str(), "call", false, billCount, rssi);
     }
 
-    vTaskDelay(5000 / portTICK_PERIOD_MS);  // Delay 5 detik
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
 }
 
-// ==== TASK KEDIP LED WIFI ====
+// ==== TASK KEDIP LED ====
 void wifiLedTask(void* parameter) {
   while (true) {
     digitalWrite(wifiLed, !digitalRead(wifiLed));
@@ -132,18 +127,19 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
 
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  // Setup NTP ke Asia/Jakarta
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < 100000) {
     Serial.print(".");
     delay(500);
   }
-  Serial.println("\nWaktu sinkron!");
+  Serial.println("\n🕐 Waktu sinkron!");
 
   xTaskCreatePinnedToCore(senderTask, "Sender Task", 4096, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(wifiLedTask, "WiFi LED Task", 2048, NULL, 1, NULL, 1);
 }
 
-// ==== LOOP UTAMA ====
+// ==== LOOP ====
 void loop() {
-  client.loop();  // Menjaga koneksi MQTT tetap hidup
+  client.loop(); // Jaga koneksi MQTT tetap hidup
 }
