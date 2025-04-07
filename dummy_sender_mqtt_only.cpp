@@ -13,6 +13,7 @@ const char* mqtt_client_id = "ESP32_Sender1";
 const int greenLed = 12;
 const int blueLed = 13;
 const int wifiLed = 14;
+#define BUTTON_PIN 26  // Tombol untuk ganti SSID
 
 // ==== OBJEK ====
 WiFiClient espClient;
@@ -25,11 +26,20 @@ int billCount = 0;
 
 // ==== SETUP WIFI ====
 void setup_wifi() {
-  wifiManager.setTimeout(180);
-  if (!wifiManager.autoConnect("Sender_AP")) {
-    Serial.println("⛔ Timeout, Restarting ESP");
-    ESP.restart();
+  pinMode(BUTTON_PIN, INPUT_PULLUP);  // Tombol ganti SSID
+
+  if (digitalRead(BUTTON_PIN) == LOW) {
+    Serial.println("🔁 Tombol ditekan, reset WiFi dan masuk ke config portal...");
+    wifiManager.resetSettings();
+    wifiManager.startConfigPortal("Sender_AP", "12345678");
+  } else {
+    wifiManager.setTimeout(180);
+    if (!wifiManager.autoConnect("Sender_AP", "12345678")) {
+      Serial.println("⛔ Timeout, Restarting ESP");
+      ESP.restart();
+    }
   }
+
   Serial.println("✅ WiFi Connected: " + WiFi.localIP().toString());
 }
 
@@ -51,7 +61,7 @@ void reconnect() {
 void sendMessage(const char* topic, const char* type, bool status, int count, int rssi) {
   time_t now = time(nullptr);
   struct tm timeinfo;
-  localtime_r(&now, &timeinfo);  // Otomatis Asia/Jakarta
+  localtime_r(&now, &timeinfo);  // WIB
 
   char formattedTime[40];
   strftime(formattedTime, sizeof(formattedTime), "%Y-%m-%d %H:%M:%S WIB", &timeinfo);
@@ -65,9 +75,7 @@ void sendMessage(const char* topic, const char* type, bool status, int count, in
   payload += "\"timestamp\":\"" + String(formattedTime) + "\"";
   payload += "}";
 
-  // ✅ Publish tanpa parameter QoS
   client.publish(topic, payload.c_str(), true);
-
   Serial.printf("📤 Sent to %s: %s\n", topic, payload.c_str());
 }
 
@@ -120,7 +128,6 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
 
-  // Sinkronisasi waktu ke Asia/Jakarta (GMT+7)
   configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < 100000) {
     Serial.print(".");
