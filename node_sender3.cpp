@@ -122,9 +122,9 @@ void resetSystem() {
   sendMessage("call", false, callCount);
   sendMessage("bill", false, billCount);
 
-  Blynk.virtualWrite(V1, 0);
-  Blynk.virtualWrite(V2, 0);
-  Blynk.virtualWrite(V3, 1);
+  Blynk.virtualWrite(V7, 0);
+  Blynk.virtualWrite(V8, 0);
+  Blynk.virtualWrite(V9, 1);
   Serial.println("🔄 Reset System");
 }
 
@@ -162,9 +162,9 @@ void loop() {
     digitalWrite(blueLed, LOW);
     sendMessage("call", true, callCount);
     sendMessage("bill", false, billCount);
-    Blynk.virtualWrite(V1, 1);
-    Blynk.virtualWrite(V2, 0);
-    Blynk.virtualWrite(V3, 0);
+    Blynk.virtualWrite(V7, 1);
+    Blynk.virtualWrite(V8, 0);
+    Blynk.virtualWrite(V9, 0);
     delay(200);
   }
 
@@ -174,9 +174,9 @@ void loop() {
     digitalWrite(blueLed, HIGH);
     sendMessage("call", false, callCount);
     sendMessage("bill", true, billCount);
-    Blynk.virtualWrite(V1, 0);
-    Blynk.virtualWrite(V2, 1);
-    Blynk.virtualWrite(V3, 0);
+    Blynk.virtualWrite(V7, 0);
+    Blynk.virtualWrite(V8, 1);
+    Blynk.virtualWrite(V9, 0);
     delay(200);
   }
 
