@@ -2,6 +2,7 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 #include <time.h>
+#include <ArduinoJson.h>
 
 // Konfigurasi MQTT
 const char* mqtt_server = "broker.emqx.io";
@@ -29,7 +30,6 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 WiFiManager wifiManager;
 
-// Fungsi callback untuk menerima pesan MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -38,7 +38,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // Handle reset command from receiver
   if (String(topic).endsWith("/reset")) {
     StaticJsonDocument<128> doc;
-    deserializeJson(doc, payload, length);
+    DeserializationError error = deserializeJson(doc, payload, length);
+    
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.c_str());
+      return;
+    }
+    
     if (doc["command"] == "reset") {
       Serial.println("Menerima perintah reset dari receiver");
       resetSystem();
@@ -60,13 +67,9 @@ void setup() {
   digitalWrite(blueLed, LOW);
   digitalWrite(wifiLed, HIGH);
 
-  digitalWrite(callButton, LOW);
-  digitalWrite(billButton, LOW);
-  digitalWrite(resetButton, HIGH);
-
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback); // Set callback untuk MQTT
+  client.setCallback(callback);
 
   // Sinkron waktu ke WIB (UTC+7)
   configTime(7 * 3600, 0, "pool.ntp.org", "time.nist.gov");
@@ -76,7 +79,6 @@ void setup() {
   }
   Serial.println("\n🕒 Waktu tersinkron!");
   
-  // === ✅ Tambahan Otomatis Reset Saat Awal Nyala ===
   resetSystem();
 }
 
@@ -133,6 +135,9 @@ void sendMessage(const char* type, bool status, int count) {
 void resetSystem() {
   digitalWrite(greenLed, LOW);
   digitalWrite(blueLed, LOW);
+
+  callCount = 0;
+  billCount = 0;
 
   sendMessage("call", false, callCount);
   sendMessage("bill", false, billCount);
