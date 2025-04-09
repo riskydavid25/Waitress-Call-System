@@ -59,6 +59,9 @@ void setup() {
     delay(500);
   }
   Serial.println("\n🕒 Waktu tersinkron!");
+  
+  // === ✅ Tambahan Otomatis Reset Saat Awal Nyala ===
+  resetSystem();
 }
 
 void setup_wifi() {
@@ -122,9 +125,9 @@ void resetSystem() {
   sendMessage("call", false, callCount);
   sendMessage("bill", false, billCount);
 
-  Blynk.virtualWrite(V1, 0);
-  Blynk.virtualWrite(V2, 0);
-  Blynk.virtualWrite(V3, 1);
+  Blynk.virtualWrite(V4, 0);
+  Blynk.virtualWrite(V5, 0);
+  Blynk.virtualWrite(V6, 1);
   Serial.println("🔄 Reset System");
 }
 
@@ -162,9 +165,9 @@ void loop() {
     digitalWrite(blueLed, LOW);
     sendMessage("call", true, callCount);
     sendMessage("bill", false, billCount);
-    Blynk.virtualWrite(V1, 1);
-    Blynk.virtualWrite(V2, 0);
-    Blynk.virtualWrite(V3, 0);
+    Blynk.virtualWrite(V4, 1);
+    Blynk.virtualWrite(V5, 0);
+    Blynk.virtualWrite(V6, 0);
     delay(200);
   }
 
@@ -174,9 +177,9 @@ void loop() {
     digitalWrite(blueLed, HIGH);
     sendMessage("call", false, callCount);
     sendMessage("bill", true, billCount);
-    Blynk.virtualWrite(V1, 0);
-    Blynk.virtualWrite(V2, 1);
-    Blynk.virtualWrite(V3, 0);
+    Blynk.virtualWrite(V4, 0);
+    Blynk.virtualWrite(V5, 1);
+    Blynk.virtualWrite(V6, 0);
     delay(200);
   }
 
