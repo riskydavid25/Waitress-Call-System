@@ -48,6 +48,10 @@ void setup() {
   digitalWrite(blueLed, LOW);
   digitalWrite(wifiLed, HIGH);
 
+  digitalWrite(callButton, LOW);
+  digitalWrite(billButton, LOW);
+  digitalWrite(resetButton, HIGH);
+
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   Blynk.begin(BLYNK_AUTH, WiFi.SSID().c_str(), WiFi.psk().c_str());
@@ -59,6 +63,9 @@ void setup() {
     delay(500);
   }
   Serial.println("\n🕒 Waktu tersinkron!");
+  
+  // === ✅ Tambahan Otomatis Reset Saat Awal Nyala ===
+  resetSystem();
 }
 
 void setup_wifi() {
