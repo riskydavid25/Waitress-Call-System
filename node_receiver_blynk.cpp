@@ -9,9 +9,9 @@
 #include <BlynkSimpleEsp32.h>
 
 // === Blynk Setup ===
-#define BLYNK_TEMPLATE_ID "TMPLXXXXXX"
-#define BLYNK_DEVICE_NAME "Waitress Receiver"
-#define BLYNK_AUTH_TOKEN "YOUR_AUTH_TOKEN"
+#define BLYNK_TEMPLATE_ID "TMPL6PZANT4zv"
+#define BLYNK_DEVICE_NAME "WAITRESS CALL SYSTEM"
+#define BLYNK_AUTH_TOKEN "cjqSPyXSlzm32sMLG0JOfH7ANlSvqe8M"
 
 // Virtual pins sesuai permintaan
 #define BLYNK_SENDER1_CALL V1
