@@ -59,6 +59,9 @@ void setup() {
     delay(500);
   }
   Serial.println("\n🕒 Waktu tersinkron!");
+
+  // === ✅ Tambahan Otomatis Reset Saat Awal Nyala ===
+  resetSystem();
 }
 
 void setup_wifi() {
